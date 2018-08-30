@@ -8,14 +8,13 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/gob"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/go-test/deep"
 )
 
 var (
@@ -29,6 +28,11 @@ type node struct {
 	MTime  time.Time
 	Childs []*node
 	Hash   []byte
+	seen   bool
+}
+
+func (n *node) String() string {
+	return fmt.Sprintf("%s (size %v, mode %s, time %v, hash %v)", n.Name, n.Size, n.Mode, n.MTime, hex.EncodeToString(n.Hash))
 }
 
 func main() {
@@ -54,7 +58,24 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		diff := deep.Equal(treeOld, tree)
+		//diff := deep.Equal(treeOld, tree)
+		var diff []string
+		for rootName, rootNode := range treeOld {
+			newNode := tree[rootName]
+			if newNode != nil {
+				diff = append(diff, compareTree(rootNode, newNode)...)
+			} else {
+				// old subtrees
+				diff = append(diff, fmt.Sprintf("directory %s not mentioned on command line", rootName))
+			}
+		}
+		for rootName := range tree {
+			oldNode := treeOld[rootName]
+			if oldNode == nil {
+				// new subtrees
+				diff = append(diff, fmt.Sprintf("directory %s newly mentioned on command line", rootName))
+			}
+		}
 		if len(diff) > 0 {
 			for _, l := range diff {
 				fmt.Printf("%v\n", l)
@@ -116,4 +137,44 @@ func loadTree(dirRoot string) *node {
 		root.Childs = append(root.Childs, n)
 	}
 	return root
+}
+
+func compareTree(old, new *node) []string {
+	var res []string
+	for _, o := range old.Childs {
+		n := findNode(new, o.Name)
+		if n != nil {
+			o.seen = true
+			n.seen = true
+			if len(o.Childs) > 0 || len(n.Childs) > 0 {
+				res = append(res, compareTree(o, n)...)
+			} else {
+				os := o.String()
+				ns := n.String()
+				if os != ns {
+					res = append(res, os+" != "+ns)
+				}
+			}
+		}
+	}
+	for _, o := range old.Childs {
+		if !o.seen {
+			res = append(res, "removed "+o.String())
+		}
+	}
+	for _, n := range new.Childs {
+		if !n.seen {
+			res = append(res, "new "+n.String())
+		}
+	}
+	return res
+}
+
+func findNode(root *node, name string) *node {
+	for _, n := range root.Childs {
+		if name == n.Name {
+			return n
+		}
+	}
+	return nil
 }
