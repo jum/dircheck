@@ -32,7 +32,7 @@ type node struct {
 }
 
 func (n *node) String() string {
-	return fmt.Sprintf("%s (size %v, mode %s, time %v, hash %v)", n.Name, n.Size, n.Mode, n.MTime, hex.EncodeToString(n.Hash))
+	return fmt.Sprintf("%s (size %v, mode %s, mtime %v, hash %v)", n.Name, n.Size, n.Mode, n.MTime, hex.EncodeToString(n.Hash))
 }
 
 func main() {
