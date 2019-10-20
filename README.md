@@ -40,13 +40,10 @@ With the associated shell script:
 ```sh
 #!/bin/sh
 PATH=$HOME/gopkg/bin:$PATH
-echo `date +'%Y%m%dT%H%M%S'` >>/tmp/launchctl.log
-dircheck -f ~/.dircheck_launch ~/Library/LaunchAgents /Library/Launch* /System/Library/Launch* >>/tmp/launchctl.log
-osascript <<EOD
-tell application "Console"
-  open "/tmp/launchctl.log"
-end tell
-EOD
+(
+	echo `date +'%Y%m%dT%H%M%S'`
+	dircheck -f ~/.dircheck_launch ~/Library/LaunchAgents /Library/Launch* /System/Library/Launch*
+) | open -f
 exit 0
 ```
 
